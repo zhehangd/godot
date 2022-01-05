@@ -146,6 +146,7 @@
 			<argument index="0" name="event" type="InputEvent" />
 			<argument index="1" name="in_local_coords" type="bool" default="false" />
 			<description>
+				Pushes an input event to [method Control._gui_input]
 			</description>
 		</method>
 		<method name="push_input">
@@ -153,6 +154,7 @@
 			<argument index="0" name="event" type="InputEvent" />
 			<argument index="1" name="in_local_coords" type="bool" default="false" />
 			<description>
+				Pushes an input event to [method Node._input]
 			</description>
 		</method>
 		<method name="push_text_input">
@@ -167,6 +169,7 @@
 			<argument index="0" name="event" type="InputEvent" />
 			<argument index="1" name="in_local_coords" type="bool" default="false" />
 			<description>
+				Pushes an input event to [method Node._unhandled_input]
 			</description>
 		</method>
 		<method name="set_input_as_handled">
