@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,7 +39,7 @@ int VisualShaderNodeParticleEmitter::get_output_port_count() const {
 }
 
 VisualShaderNodeParticleEmitter::PortType VisualShaderNodeParticleEmitter::get_output_port_type(int p_port) const {
-	return PORT_TYPE_VECTOR;
+	return PORT_TYPE_VECTOR_3D;
 }
 
 String VisualShaderNodeParticleEmitter::get_output_port_name(int p_port) const {
@@ -154,7 +154,7 @@ int VisualShaderNodeParticleBoxEmitter::get_input_port_count() const {
 
 VisualShaderNodeParticleBoxEmitter::PortType VisualShaderNodeParticleBoxEmitter::get_input_port_type(int p_port) const {
 	if (p_port == 0) {
-		return PORT_TYPE_VECTOR;
+		return PORT_TYPE_VECTOR_3D;
 	}
 	return PORT_TYPE_SCALAR;
 }
@@ -270,17 +270,17 @@ int VisualShaderNodeParticleMeshEmitter::get_output_port_count() const {
 VisualShaderNodeParticleBoxEmitter::PortType VisualShaderNodeParticleMeshEmitter::get_output_port_type(int p_port) const {
 	switch (p_port) {
 		case 0:
-			return PORT_TYPE_VECTOR; // position
+			return PORT_TYPE_VECTOR_3D; // position
 		case 1:
-			return PORT_TYPE_VECTOR; // normal
+			return PORT_TYPE_VECTOR_3D; // normal
 		case 2:
-			return PORT_TYPE_VECTOR; // color
+			return PORT_TYPE_VECTOR_3D; // color
 		case 3:
 			return PORT_TYPE_SCALAR; // alpha
 		case 4:
-			return PORT_TYPE_VECTOR; // uv
+			return PORT_TYPE_VECTOR_3D; // uv
 		case 5:
-			return PORT_TYPE_VECTOR; // uv2
+			return PORT_TYPE_VECTOR_3D; // uv2
 	}
 	return PORT_TYPE_SCALAR;
 }
@@ -318,26 +318,24 @@ String VisualShaderNodeParticleMeshEmitter::get_input_port_name(int p_port) cons
 String VisualShaderNodeParticleMeshEmitter::generate_global(Shader::Mode p_mode, VisualShader::Type p_type, int p_id) const {
 	String code;
 
-	if (mesh.is_valid()) {
-		if (is_output_port_connected(0)) { // position
-			code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_vx") + ";\n";
-		}
+	if (is_output_port_connected(0)) { // position
+		code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_vx") + ";\n";
+	}
 
-		if (is_output_port_connected(1)) { // normal
-			code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_nm") + ";\n";
-		}
+	if (is_output_port_connected(1)) { // normal
+		code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_nm") + ";\n";
+	}
 
-		if (is_output_port_connected(2) || is_output_port_connected(3)) { // color & alpha
-			code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_col") + ";\n";
-		}
+	if (is_output_port_connected(2) || is_output_port_connected(3)) { // color & alpha
+		code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_col") + ";\n";
+	}
 
-		if (is_output_port_connected(4)) { // uv
-			code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_uv") + ";\n";
-		}
+	if (is_output_port_connected(4)) { // uv
+		code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_uv") + ";\n";
+	}
 
-		if (is_output_port_connected(5)) { // uv2
-			code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_uv2") + ";\n";
-		}
+	if (is_output_port_connected(5)) { // uv2
+		code += "uniform sampler2D " + make_unique_id(p_type, p_id, "mesh_uv2") + ";\n";
 	}
 
 	return code;
@@ -503,67 +501,97 @@ void VisualShaderNodeParticleMeshEmitter::_update_textures() {
 	Vector<Vector2> uvs;
 	Vector<Vector2> uvs2;
 
+	const int surface_count = mesh->get_surface_count();
+
 	if (use_all_surfaces) {
-		for (int i = 0; i < max_surface_index; i++) {
+		for (int i = 0; i < surface_count; i++) {
+			const Array surface_arrays = mesh->surface_get_arrays(i);
+			const int surface_arrays_size = surface_arrays.size();
+
 			// position
-			Array vertex_array = mesh->surface_get_arrays(i)[Mesh::ARRAY_VERTEX];
-			for (int j = 0; j < vertex_array.size(); j++) {
-				vertices.push_back((Vector3)vertex_array[j]);
+			if (surface_arrays_size > Mesh::ARRAY_VERTEX) {
+				Array vertex_array = surface_arrays[Mesh::ARRAY_VERTEX];
+				for (int j = 0; j < vertex_array.size(); j++) {
+					vertices.push_back((Vector3)vertex_array[j]);
+				}
 			}
 
 			// normal
-			Array normal_array = mesh->surface_get_arrays(i)[Mesh::ARRAY_NORMAL];
-			for (int j = 0; j < normal_array.size(); j++) {
-				normals.push_back((Vector3)normal_array[j]);
+			if (surface_arrays_size > Mesh::ARRAY_NORMAL) {
+				Array normal_array = surface_arrays[Mesh::ARRAY_NORMAL];
+				for (int j = 0; j < normal_array.size(); j++) {
+					normals.push_back((Vector3)normal_array[j]);
+				}
 			}
 
 			// color
-			Array color_array = mesh->surface_get_arrays(i)[Mesh::ARRAY_COLOR];
-			for (int j = 0; j < color_array.size(); j++) {
-				colors.push_back((Color)color_array[j]);
+			if (surface_arrays_size > Mesh::ARRAY_COLOR) {
+				Array color_array = surface_arrays[Mesh::ARRAY_COLOR];
+				for (int j = 0; j < color_array.size(); j++) {
+					colors.push_back((Color)color_array[j]);
+				}
 			}
 
 			// uv
-			Array uv_array = mesh->surface_get_arrays(i)[Mesh::ARRAY_TEX_UV];
-			for (int j = 0; j < uv_array.size(); j++) {
-				uvs.push_back((Vector2)uv_array[j]);
+			if (surface_arrays_size > Mesh::ARRAY_TEX_UV) {
+				Array uv_array = surface_arrays[Mesh::ARRAY_TEX_UV];
+				for (int j = 0; j < uv_array.size(); j++) {
+					uvs.push_back((Vector2)uv_array[j]);
+				}
 			}
 
 			// uv2
-			Array uv2_array = mesh->surface_get_arrays(i)[Mesh::ARRAY_TEX_UV2];
-			for (int j = 0; j < uv2_array.size(); j++) {
-				uvs2.push_back((Vector2)uv2_array[j]);
+			if (surface_arrays_size > Mesh::ARRAY_TEX_UV2) {
+				Array uv2_array = surface_arrays[Mesh::ARRAY_TEX_UV2];
+				for (int j = 0; j < uv2_array.size(); j++) {
+					uvs2.push_back((Vector2)uv2_array[j]);
+				}
 			}
 		}
 	} else {
-		// position
-		Array vertex_array = mesh->surface_get_arrays(surface_index)[Mesh::ARRAY_VERTEX];
-		for (int i = 0; i < vertex_array.size(); i++) {
-			vertices.push_back((Vector3)vertex_array[i]);
-		}
+		if (surface_index >= 0 && surface_index < surface_count) {
+			const Array surface_arrays = mesh->surface_get_arrays(surface_index);
+			const int surface_arrays_size = surface_arrays.size();
 
-		// normal
-		Array normal_array = mesh->surface_get_arrays(surface_index)[Mesh::ARRAY_NORMAL];
-		for (int i = 0; i < normal_array.size(); i++) {
-			normals.push_back((Vector3)normal_array[i]);
-		}
+			// position
+			if (surface_arrays_size > Mesh::ARRAY_VERTEX) {
+				Array vertex_array = surface_arrays[Mesh::ARRAY_VERTEX];
+				for (int i = 0; i < vertex_array.size(); i++) {
+					vertices.push_back((Vector3)vertex_array[i]);
+				}
+			}
 
-		// color
-		Array color_array = mesh->surface_get_arrays(surface_index)[Mesh::ARRAY_COLOR];
-		for (int i = 0; i < color_array.size(); i++) {
-			colors.push_back((Color)color_array[i]);
-		}
+			// normal
+			if (surface_arrays_size > Mesh::ARRAY_NORMAL) {
+				Array normal_array = surface_arrays[Mesh::ARRAY_NORMAL];
+				for (int i = 0; i < normal_array.size(); i++) {
+					normals.push_back((Vector3)normal_array[i]);
+				}
+			}
 
-		// uv
-		Array uv_array = mesh->surface_get_arrays(surface_index)[Mesh::ARRAY_TEX_UV];
-		for (int j = 0; j < uv_array.size(); j++) {
-			uvs.push_back((Vector2)uv_array[j]);
-		}
+			// color
+			if (surface_arrays_size > Mesh::ARRAY_COLOR) {
+				Array color_array = surface_arrays[Mesh::ARRAY_COLOR];
+				for (int i = 0; i < color_array.size(); i++) {
+					colors.push_back((Color)color_array[i]);
+				}
+			}
 
-		// uv2
-		Array uv2_array = mesh->surface_get_arrays(surface_index)[Mesh::ARRAY_TEX_UV2];
-		for (int j = 0; j < uv2_array.size(); j++) {
-			uvs2.push_back((Vector2)uv2_array[j]);
+			// uv
+			if (surface_arrays_size > Mesh::ARRAY_TEX_UV) {
+				Array uv_array = surface_arrays[Mesh::ARRAY_TEX_UV];
+				for (int j = 0; j < uv_array.size(); j++) {
+					uvs.push_back((Vector2)uv_array[j]);
+				}
+			}
+
+			// uv2
+			if (surface_arrays_size > Mesh::ARRAY_TEX_UV2) {
+				Array uv2_array = surface_arrays[Mesh::ARRAY_TEX_UV2];
+				for (int j = 0; j < uv2_array.size(); j++) {
+					uvs2.push_back((Vector2)uv2_array[j]);
+				}
+			}
 		}
 	}
 
@@ -577,12 +605,6 @@ void VisualShaderNodeParticleMeshEmitter::_update_textures() {
 void VisualShaderNodeParticleMeshEmitter::set_mesh(Ref<Mesh> p_mesh) {
 	if (mesh == p_mesh) {
 		return;
-	}
-
-	if (p_mesh.is_valid()) {
-		max_surface_index = p_mesh->get_surface_count();
-	} else {
-		max_surface_index = 0;
 	}
 
 	if (mesh.is_valid()) {
@@ -623,7 +645,16 @@ bool VisualShaderNodeParticleMeshEmitter::is_use_all_surfaces() const {
 }
 
 void VisualShaderNodeParticleMeshEmitter::set_surface_index(int p_surface_index) {
-	if (p_surface_index == surface_index || p_surface_index < 0 || p_surface_index >= max_surface_index) {
+	if (mesh.is_valid()) {
+		if (mesh->get_surface_count() > 0) {
+			p_surface_index = CLAMP(p_surface_index, 0, mesh->get_surface_count() - 1);
+		} else {
+			p_surface_index = 0;
+		}
+	} else if (p_surface_index < 0) {
+		p_surface_index = 0;
+	}
+	if (surface_index == p_surface_index) {
 		return;
 	}
 	surface_index = p_surface_index;
@@ -700,7 +731,7 @@ int VisualShaderNodeParticleMultiplyByAxisAngle::get_input_port_count() const {
 
 VisualShaderNodeParticleMultiplyByAxisAngle::PortType VisualShaderNodeParticleMultiplyByAxisAngle::get_input_port_type(int p_port) const {
 	if (p_port == 0 || p_port == 1) { // position, rotation_axis
-		return PORT_TYPE_VECTOR;
+		return PORT_TYPE_VECTOR_3D;
 	}
 	return PORT_TYPE_SCALAR; // angle (degrees/radians)
 }
@@ -731,7 +762,7 @@ int VisualShaderNodeParticleMultiplyByAxisAngle::get_output_port_count() const {
 }
 
 VisualShaderNodeParticleMultiplyByAxisAngle::PortType VisualShaderNodeParticleMultiplyByAxisAngle::get_output_port_type(int p_port) const {
-	return PORT_TYPE_VECTOR;
+	return PORT_TYPE_VECTOR_3D;
 }
 
 String VisualShaderNodeParticleMultiplyByAxisAngle::get_output_port_name(int p_port) const {
@@ -784,7 +815,7 @@ int VisualShaderNodeParticleConeVelocity::get_input_port_count() const {
 
 VisualShaderNodeParticleConeVelocity::PortType VisualShaderNodeParticleConeVelocity::get_input_port_type(int p_port) const {
 	if (p_port == 0) {
-		return PORT_TYPE_VECTOR;
+		return PORT_TYPE_VECTOR_3D;
 	} else if (p_port == 1) {
 		return PORT_TYPE_SCALAR;
 	}
@@ -805,7 +836,7 @@ int VisualShaderNodeParticleConeVelocity::get_output_port_count() const {
 }
 
 VisualShaderNodeParticleConeVelocity::PortType VisualShaderNodeParticleConeVelocity::get_output_port_type(int p_port) const {
-	return PORT_TYPE_VECTOR;
+	return PORT_TYPE_VECTOR_3D;
 }
 
 String VisualShaderNodeParticleConeVelocity::get_output_port_name(int p_port) const {
@@ -868,7 +899,7 @@ int VisualShaderNodeParticleRandomness::get_output_port_count() const {
 
 VisualShaderNodeParticleRandomness::PortType VisualShaderNodeParticleRandomness::get_output_port_type(int p_port) const {
 	if (op_type == OP_TYPE_VECTOR) {
-		return PORT_TYPE_VECTOR;
+		return PORT_TYPE_VECTOR_3D;
 	}
 	return PORT_TYPE_SCALAR;
 }
@@ -883,7 +914,7 @@ int VisualShaderNodeParticleRandomness::get_input_port_count() const {
 
 VisualShaderNodeParticleRandomness::PortType VisualShaderNodeParticleRandomness::get_input_port_type(int p_port) const {
 	if (op_type == OP_TYPE_VECTOR) {
-		return PORT_TYPE_VECTOR;
+		return PORT_TYPE_VECTOR_3D;
 	}
 	return PORT_TYPE_SCALAR;
 }
@@ -965,7 +996,7 @@ int VisualShaderNodeParticleAccelerator::get_output_port_count() const {
 }
 
 VisualShaderNodeParticleAccelerator::PortType VisualShaderNodeParticleAccelerator::get_output_port_type(int p_port) const {
-	return PORT_TYPE_VECTOR;
+	return PORT_TYPE_VECTOR_3D;
 }
 
 String VisualShaderNodeParticleAccelerator::get_output_port_name(int p_port) const {
@@ -978,11 +1009,11 @@ int VisualShaderNodeParticleAccelerator::get_input_port_count() const {
 
 VisualShaderNodeParticleAccelerator::PortType VisualShaderNodeParticleAccelerator::get_input_port_type(int p_port) const {
 	if (p_port == 0) {
-		return PORT_TYPE_VECTOR;
+		return PORT_TYPE_VECTOR_3D;
 	} else if (p_port == 1) {
 		return PORT_TYPE_SCALAR;
 	} else if (p_port == 2) {
-		return PORT_TYPE_VECTOR;
+		return PORT_TYPE_VECTOR_3D;
 	}
 	return PORT_TYPE_SCALAR;
 }
@@ -1075,19 +1106,19 @@ VisualShaderNodeParticleOutput::PortType VisualShaderNodeParticleOutput::get_inp
 	switch (p_port) {
 		case 0:
 			if (shader_type == VisualShader::TYPE_START_CUSTOM || shader_type == VisualShader::TYPE_PROCESS_CUSTOM) {
-				return PORT_TYPE_VECTOR; // custom.rgb
+				return PORT_TYPE_VECTOR_3D; // custom.rgb
 			}
 			return PORT_TYPE_BOOLEAN; // active
 		case 1:
 			if (shader_type == VisualShader::TYPE_START_CUSTOM || shader_type == VisualShader::TYPE_PROCESS_CUSTOM) {
 				break; // custom.a (scalar)
 			}
-			return PORT_TYPE_VECTOR; // velocity
+			return PORT_TYPE_VECTOR_3D; // velocity
 		case 2:
-			return PORT_TYPE_VECTOR; // color & velocity
+			return PORT_TYPE_VECTOR_3D; // color & velocity
 		case 3:
 			if (shader_type == VisualShader::TYPE_START_CUSTOM || shader_type == VisualShader::TYPE_PROCESS_CUSTOM) {
-				return PORT_TYPE_VECTOR; // color
+				return PORT_TYPE_VECTOR_3D; // color
 			}
 			break; // alpha (scalar)
 		case 4:
@@ -1100,18 +1131,18 @@ VisualShaderNodeParticleOutput::PortType VisualShaderNodeParticleOutput::get_inp
 			if (shader_type == VisualShader::TYPE_COLLIDE) {
 				return PORT_TYPE_TRANSFORM; // transform
 			}
-			return PORT_TYPE_VECTOR; // position
+			return PORT_TYPE_VECTOR_3D; // position
 		case 5:
 			if (shader_type == VisualShader::TYPE_START_CUSTOM || shader_type == VisualShader::TYPE_PROCESS_CUSTOM) {
 				return PORT_TYPE_TRANSFORM; // transform
 			}
 			if (shader_type == VisualShader::TYPE_PROCESS) {
-				return PORT_TYPE_VECTOR; // rotation_axis
+				return PORT_TYPE_VECTOR_3D; // rotation_axis
 			}
 			break; // scale (scalar)
 		case 6:
 			if (shader_type == VisualShader::TYPE_START) {
-				return PORT_TYPE_VECTOR; // rotation_axis
+				return PORT_TYPE_VECTOR_3D; // rotation_axis
 			}
 			break;
 		case 7:
@@ -1341,13 +1372,13 @@ VisualShaderNodeParticleEmit::PortType VisualShaderNodeParticleEmit::get_input_p
 		case 1:
 			return PORT_TYPE_TRANSFORM;
 		case 2:
-			return PORT_TYPE_VECTOR;
+			return PORT_TYPE_VECTOR_3D;
 		case 3:
-			return PORT_TYPE_VECTOR;
+			return PORT_TYPE_VECTOR_3D;
 		case 4:
 			return PORT_TYPE_SCALAR;
 		case 5:
-			return PORT_TYPE_VECTOR;
+			return PORT_TYPE_VECTOR_3D;
 		case 6:
 			return PORT_TYPE_SCALAR;
 	}
@@ -1417,22 +1448,22 @@ bool VisualShaderNodeParticleEmit::is_generate_input_var(int p_port) const {
 	return true;
 }
 
-String VisualShaderNodeParticleEmit::get_input_port_default_hint(int p_port) const {
+bool VisualShaderNodeParticleEmit::is_input_port_default(int p_port, Shader::Mode p_mode) const {
 	switch (p_port) {
 		case 1:
-			return "default";
+			return true;
 		case 2:
-			return "default";
+			return true;
 		case 3:
-			return "default";
+			return true;
 		case 4:
-			return "default";
+			return true;
 		case 5:
-			return "default";
+			return true;
 		case 6:
-			return "default";
+			return true;
 	}
-	return String();
+	return false;
 }
 
 String VisualShaderNodeParticleEmit::generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview) const {

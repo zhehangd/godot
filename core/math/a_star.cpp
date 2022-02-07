@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,7 +32,6 @@
 
 #include "core/math/geometry_3d.h"
 #include "core/object/script_language.h"
-#include "scene/scene_string_names.h"
 
 int AStar::get_available_point_id() const {
 	if (points.has(last_free_id)) {
@@ -210,7 +209,7 @@ bool AStar::has_point(int p_id) const {
 	return points.has(p_id);
 }
 
-Array AStar::get_points() {
+Array AStar::get_point_ids() {
 	Array point_list;
 
 	for (OAHashMap<int, Point *>::Iterator it = points.iter(); it.valid; it = points.next_iter(it)) {
@@ -539,7 +538,7 @@ void AStar::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("remove_point", "id"), &AStar::remove_point);
 	ClassDB::bind_method(D_METHOD("has_point", "id"), &AStar::has_point);
 	ClassDB::bind_method(D_METHOD("get_point_connections", "id"), &AStar::get_point_connections);
-	ClassDB::bind_method(D_METHOD("get_points"), &AStar::get_points);
+	ClassDB::bind_method(D_METHOD("get_point_ids"), &AStar::get_point_ids);
 
 	ClassDB::bind_method(D_METHOD("set_point_disabled", "id", "disabled"), &AStar::set_point_disabled, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("is_point_disabled", "id"), &AStar::is_point_disabled);
@@ -606,8 +605,8 @@ Vector<int> AStar2D::get_point_connections(int p_id) {
 	return astar.get_point_connections(p_id);
 }
 
-Array AStar2D::get_points() {
-	return astar.get_points();
+Array AStar2D::get_point_ids() {
+	return astar.get_point_ids();
 }
 
 void AStar2D::set_point_disabled(int p_id, bool p_disabled) {
@@ -699,8 +698,7 @@ Vector<Vector2> AStar2D::get_point_path(int p_from_id, int p_to_id) {
 	ERR_FAIL_COND_V_MSG(!to_exists, Vector<Vector2>(), vformat("Can't get point path. Point with id: %d doesn't exist.", p_to_id));
 
 	if (a == b) {
-		Vector<Vector2> ret;
-		ret.push_back(Vector2(a->pos.x, a->pos.y));
+		Vector<Vector2> ret = { Vector2(a->pos.x, a->pos.y) };
 		return ret;
 	}
 
@@ -859,7 +857,7 @@ void AStar2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("remove_point", "id"), &AStar2D::remove_point);
 	ClassDB::bind_method(D_METHOD("has_point", "id"), &AStar2D::has_point);
 	ClassDB::bind_method(D_METHOD("get_point_connections", "id"), &AStar2D::get_point_connections);
-	ClassDB::bind_method(D_METHOD("get_points"), &AStar2D::get_points);
+	ClassDB::bind_method(D_METHOD("get_point_ids"), &AStar2D::get_point_ids);
 
 	ClassDB::bind_method(D_METHOD("set_point_disabled", "id", "disabled"), &AStar2D::set_point_disabled, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("is_point_disabled", "id"), &AStar2D::is_point_disabled);
