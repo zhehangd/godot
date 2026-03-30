@@ -1,3 +1,8 @@
+# Eox's Godot Engine
+
+This is a patched fork of [Godot Engine](https://github.com/godotengine/godot)
+which exists to satisfy my personal needs.
+
 # Godot Engine
 
 <p align="center">
